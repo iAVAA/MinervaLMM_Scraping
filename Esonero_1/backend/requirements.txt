@@ -1,0 +1,10 @@
+fastapi>=0.100.0
+uvicorn>=0.22.0
+pydantic>=2.0.0
+crawl4ai
+playwright
+html2text
+beautifulsoup4
+httpx
+Levenshtein>=0.25.0
+rouge-score>=0.1.2

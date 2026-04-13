@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="it" class="antialiased">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Esonero 1 - Advanced Document Parser</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out',
+                        'slide-up': 'slideUp 0.6s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar for a premium look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05); 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2); 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.4); 
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-slate-200 min-h-screen font-sans selection:bg-indigo-500 selection:text-white">
+    <div class="container mx-auto p-4 max-w-7xl pt-12 pb-24">
+        
+        <!-- Header Section -->
+        <header class="text-center mb-12 animate-fade-in">
+            <div class="inline-flex items-center justify-center space-x-3 mb-4">
+                <div class="h-px w-12 bg-indigo-500/50"></div>
+                <span class="text-indigo-400 font-medium tracking-widest uppercase text-sm">Laboratorio di Ingegneria Informatica</span>
+                <div class="h-px w-12 bg-indigo-500/50"></div>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 drop-shadow-sm mb-4">Advanced Document Parser</h1>
+            <p class="text-slate-400 max-w-2xl mx-auto">Architettura a microservizi per l'estrazione e la valutazione automatica di dataset testuali tramite Gold Standard.</p>
+        </header>
+
+        {% if error %}
+        <div class="animate-slide-up bg-red-500/10 border border-red-500/30 text-red-400 px-6 py-4 rounded-xl shadow-lg mb-8 backdrop-blur-md flex items-center space-x-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="font-medium">{{ error }}</span>
+        </div>
+        {% endif %}
+
+        <!-- Input Card -->
+        <div class="animate-slide-up bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] mb-10 overflow-hidden relative group">
+            <div class="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+            
+            <h2 class="text-2xl font-semibold mb-6 flex items-center space-x-2 text-white relative z-10">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span>Avvia Analisi</span>
+            </h2>
+            
+            <form action="/parse" method="POST" class="space-y-6 relative z-10 w-full">
+                <div>
+                    <label class="block text-slate-300 font-medium mb-2 pl-1">URL Target</label>
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <input type="url" name="url" class="flex-1 bg-slate-900/50 border border-slate-700 text-white placeholder-slate-500 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-inner" placeholder="https://en.wikipedia.org/wiki/..." required>
+                        <button type="submit" class="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-medium px-8 py-4 rounded-xl shadow-lg shadow-indigo-500/25 transition-all transform hover:-translate-y-0.5 whitespace-nowrap flex items-center justify-center space-x-2">
+                            <span>Processa Documento</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            {% if gs_list %}
+            <div class="mt-8 pt-6 border-t border-slate-700/50 relative z-10">
+                <label for="gs-select" class="text-sm font-medium text-slate-400 mb-3 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1v-1a1 1 0 011-1zm0 9a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1z" clip-rule="evenodd" />
+                    </svg>
+                    URL di test pronti dal Gold Standard:
+                </label>
+                <div class="relative">
+                    <select id="gs-select" 
+                            onchange="if(this.value) document.querySelector('input[name=url]').value=this.value;" 
+                            class="w-full bg-slate-800/80 text-indigo-200 border border-slate-700 hover:border-indigo-500/50 rounded-xl px-4 py-3 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200 cursor-pointer">
+                        <option value="">-- Seleziona un documento di test --</option>
+                        {% for item in gs_list %}
+                        <option value="{{ item.url }}">{{ item.url }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-indigo-400">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if domains %}
+            <div class="absolute bottom-4 right-6 text-[10px] text-slate-500 font-mono tracking-wider">
+                DOMAINS_ENABLED: [{{ domains | join(', ') }}]
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Results Section -->
+        {% if parsed_data %}
+        <div class="animate-slide-up bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden" style="animation-delay: 0.1s;">
+            <!-- Results Header -->
+            <div class="bg-slate-800/80 border-b border-white/10 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center space-x-2 mb-1">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-green-500/20 text-green-400 border border-green-500/30">Successo</span>
+                        <span class="text-xs text-slate-400">{{ parsed_data.domain }}</span>
+                    </div>
+                    <h2 class="text-xl md:text-2xl font-bold text-white">{{ parsed_data.title }}</h2>
+                </div>
+                
+                {% if metrics %}
+                <div class="flex flex-wrap justify-start md:justify-end gap-2 mt-4 md:mt-0 xl:max-w-[80%]">
+                    <!-- Core Performance (F1, P, R) -->
+                    <div class="bg-slate-900/80 border {% if metrics.f1 >= 0.9 %}border-green-500/50 shadow-[0_0_10px_rgba(34,197,94,0.15)]{% elif metrics.f1 >= 0.7 %}border-amber-500/40{% else %}border-red-500/40{% endif %} rounded-lg px-3 py-2 text-center flex-1 lg:flex-none min-w-[80px]">
+                        <div class="text-[9px] {% if metrics.f1 >= 0.9 %}text-green-300{% elif metrics.f1 >= 0.7 %}text-amber-300{% else %}text-red-300{% endif %} uppercase tracking-widest mb-1">F1-Score</div>
+                        <div class="text-base font-bold {% if metrics.f1 >= 0.9 %}text-green-400{% elif metrics.f1 >= 0.7 %}text-amber-400{% else %}text-red-400{% endif %}">{{ "%.1f"|format(metrics.f1 * 100) }}%</div>
+                    </div>
+                    <div class="bg-slate-900/60 border border-slate-700/60 rounded-lg px-3 py-2 text-center flex-1 lg:flex-none min-w-[70px]">
+                        <div class="text-[9px] text-slate-400 uppercase tracking-widest mb-1">Prec</div>
+                        <div class="text-base font-bold {% if metrics.precision >= 0.9 %}text-green-400{% elif metrics.precision >= 0.7 %}text-amber-400{% else %}text-red-400{% endif %}">{{ "%.1f"|format(metrics.precision * 100) }}%</div>
+                    </div>
+                    <div class="bg-slate-900/60 border border-slate-700/60 rounded-lg px-3 py-2 text-center flex-1 lg:flex-none min-w-[70px]">
+                        <div class="text-[9px] text-slate-400 uppercase tracking-widest mb-1">Rec</div>
+                        <div class="text-base font-bold {% if metrics.recall >= 0.9 %}text-green-400{% elif metrics.recall >= 0.7 %}text-amber-400{% else %}text-red-400{% endif %}">{{ "%.1f"|format(metrics.recall * 100) }}%</div>
+                    </div>
+
+                    <!-- Similarity & Structure (ROUGE, Jaccard) -->
+                    <div class="bg-slate-900/60 border border-slate-700/60 rounded-lg px-3 py-2 text-center flex-1 lg:flex-none min-w-[80px]" title="ROUGE-L Longest Common Subsequence">
+                        <div class="text-[9px] text-slate-400 uppercase tracking-widest mb-1">Rouge-L</div>
+                        <div class="text-base font-bold {% if metrics.rouge_l >= 0.8 %}text-green-400{% elif metrics.rouge_l >= 0.6 %}text-amber-400{% else %}text-red-400{% endif %}">{{ "%.1f"|format(metrics.rouge_l * 100) }}%</div>
+                    </div>
+                    <div class="bg-slate-900/60 border border-slate-700/60 rounded-lg px-3 py-2 text-center flex-1 lg:flex-none min-w-[80px]" title="Jaccard Index (3-gram)">
+                        <div class="text-[9px] text-slate-400 uppercase tracking-widest mb-1">Jacc(3g)</div>
+                        <div class="text-base font-bold {% if metrics.jaccard >= 0.85 %}text-green-400{% elif metrics.jaccard >= 0.65 %}text-amber-400{% else %}text-red-400{% endif %}">{{ "%.1f"|format(metrics.jaccard * 100) }}%</div>
+                    </div>
+
+                    <!-- Error Rates (CER, WER, Leakage) -->
+                    <div class="bg-slate-900/60 border border-slate-700/60 rounded-lg px-3 py-2 text-center flex-1 lg:flex-none min-w-[70px]" title="Character Error Rate">
+                        <div class="text-[9px] text-slate-400 uppercase tracking-widest mb-1">CER</div>
+                        <div class="text-base font-bold {% if metrics.cer <= 0.05 %}text-green-400{% elif metrics.cer <= 0.15 %}text-amber-400{% else %}text-red-400{% endif %}">{{ "%.1f"|format(metrics.cer * 100) }}%</div>
+                    </div>
+                    <div class="bg-slate-900/60 border border-slate-700/60 rounded-lg px-3 py-2 text-center flex-1 lg:flex-none min-w-[70px]" title="Word Error Rate">
+                        <div class="text-[9px] text-slate-400 uppercase tracking-widest mb-1">WER</div>
+                        <div class="text-base font-bold {% if metrics.wer <= 0.05 %}text-green-400{% elif metrics.wer <= 0.15 %}text-amber-400{% else %}text-red-400{% endif %}">{{ "%.1f"|format(metrics.wer * 100) }}%</div>
+                    </div>
+                    <div class="bg-slate-900/80 border {% if metrics.leakage == 0 %}border-green-500/30{% else %}border-red-500/40{% endif %} rounded-lg px-3 py-2 text-center flex-1 lg:flex-none min-w-[80px]" title="Tag Leakage Rate (Artifacts / Words)">
+                        <div class="text-[9px] {% if metrics.leakage == 0 %}text-green-400{% else %}text-red-300{% endif %} uppercase tracking-widest mb-1">Leakage</div>
+                        <div class="text-base font-bold {% if metrics.leakage == 0 %}text-green-400{% elif metrics.leakage <= 0.05 %}text-amber-400{% else %}text-red-400{% endif %}">{{ "%.2f"|format(metrics.leakage * 100) }}%</div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-xs text-amber-400/80 bg-amber-500/10 px-4 py-2 border border-amber-500/20 rounded-lg flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                    URL non presente nel Gold Standard (Metriche N.A.)
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if metrics %}
+            <!-- Guida alle Metriche -->
+            <details class="group bg-slate-900/60 border-b border-t border-slate-700/50 transition-all duration-300 w-full mb-1">
+                <summary class="flex justify-between items-center font-medium cursor-pointer list-none p-4 text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors">
+                    <span class="flex items-center space-x-2 text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span>📊 Guida alla Lettura delle Metriche</span>
+                    </span>
+                    <span class="transition group-open:rotate-180">
+                        <svg fill="none" height="20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" viewBox="0 0 24 24" width="20"><path d="M6 9l6 6 6-6"></path></svg>
+                    </span>
+                </summary>
+                <div class="text-xs text-slate-400 p-6 pt-2 border-t border-slate-700/50 space-y-5 leading-relaxed bg-slate-900/40">
+                    <div>
+                        <strong class="text-indigo-300 block mb-1 text-sm font-semibold">1. F1-Score (Parole / Token)</strong>
+                        <div class="inline-block bg-green-500/10 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-[10px] uppercase tracking-wide font-bold mb-1">Target ideale: &gt; 90%</div>
+                        <p>L'esattezza dell'estrazione. Misura l'intersezione pura delle parole (ignorando l'ordine). <span class="bg-red-500/10 text-red-400 px-1 rounded">Sotto l' 80%</span> significa che sta catturando spazzatura o perdendo testo cruciale.</p>
+                    </div>
+                    <div>
+                        <strong class="text-emerald-300 block mb-1 text-sm font-semibold">2. Indice di Jaccard (Caratteri)</strong>
+                        <div class="inline-block bg-green-500/10 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-[10px] uppercase tracking-wide font-bold mb-1">Target ideale: &gt; 85%</div>
+                        <p>La sovrapposizione del testo a livello di lettere. È utile per capire se un calo dell'F1 è dovuto a reali errori di corpus esteso o leggeri problemi di spaziatura.</p>
+                    </div>
+                    <div>
+                        <strong class="text-rose-300 block mb-1 text-sm font-semibold">3. CER (Character Error Rate)</strong>
+                        <div class="inline-block bg-green-500/10 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-[10px] uppercase tracking-wide font-bold mb-1">Target ideale: &lt; 5%</div>
+                        <p>Il cosiddetto "costo di correzione". Stima la percentuale di caratteri da modificare, inserire o cancellare per rendere l'output identico al Gold Standard. Minore è il valore, migliore è il risultato.</p>
+                    </div>
+                    <div>
+                        <strong class="text-violet-300 block mb-1 text-sm font-semibold">4. ROUGE-L (Integrità Strutturale)</strong>
+                        <div class="inline-block bg-green-500/10 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-[10px] uppercase tracking-wide font-bold mb-1">Target ideale: &gt; 80%</div>
+                        <p>La preservazione della struttura logica. Valuta se la sequenza e l'ordine dei concetti sono rimasti intatti, attributo fondamentale per il passaggio del testo ad una intelligenza artificiale (LLM/RAG).</p>
+                    </div>
+                    <div>
+                        <strong class="text-red-400 block mb-1 text-sm font-semibold">5. Tag Leakage Rate (Penalità Base)</strong>
+                        <div class="inline-block bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded text-[10px] uppercase tracking-wide font-bold mb-1">Tolleranza Zero (0%)</div>
+                        <p>La presenza di "scarti" sorgente. Misura quanti frammenti di codice HTML (es. <code>&lt;div</code>, <code>&amp;nbsp;</code>, <code>href=</code>) sono sfuggiti alla pulizia del parser. Se è maggiore di zero, lo script del DOM/Regex ha disfunzioni.</p>
+                    </div>
+                </div>
+            </details>
+            {% endif %}
+
+            <!-- Content Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-slate-700/50">
+                <!-- Source HTML -->
+                <div class="flex flex-col h-full bg-slate-900/20">
+                    <div class="p-4 border-b border-slate-700/50 flex items-center justify-between bg-slate-800/40">
+                        <h3 class="font-medium text-slate-300 flex items-center space-x-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                            </svg>
+                            <span>Sorgente HTML Grezzo</span>
+                        </h3>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="downloadResult('html')" class="flex items-center space-x-1 bg-slate-700/80 hover:bg-slate-600 text-slate-200 text-xs px-2 py-1 rounded transition-colors border border-slate-600/50" title="Scarica HTML">
+                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                <span>Scarica</span>
+                            </button>
+                            <span class="text-[10px] bg-slate-800 text-slate-500 px-2 py-1 rounded font-mono border border-slate-700">Dati Sporchi</span>
+                        </div>
+                    </div>
+                    <div class="p-4 p-5 h-[600px] overflow-y-auto group">
+                        <div class="text-[11px] leading-relaxed font-mono text-slate-500/80 group-hover:text-slate-400 transition-colors" style="white-space: pre-wrap; word-break: break-all;">{{ parsed_data.html_text[:10000] }}...
+<br><br><span class="text-indigo-500/50 italic">[HTML Troncato per la visualizzazione]</span></div>
+                    </div>
+                </div>
+
+                <!-- Clean Markdown -->
+                <div class="flex flex-col h-full bg-slate-900/60">
+                    <div class="p-4 border-b border-slate-700/50 flex items-center justify-between bg-slate-800/40">
+                        <h3 class="font-medium text-white flex items-center space-x-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                            </svg>
+                            <span>Testo Markdown Pulito</span>
+                        </h3>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="downloadResult('md')" class="flex items-center space-x-1 bg-indigo-600/80 hover:bg-indigo-500 text-white text-xs px-2 py-1 rounded transition-colors shadow-sm border border-indigo-400/30" title="Scarica Markdown">
+                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                <span>Scarica</span>
+                            </button>
+                            <span class="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-1 rounded font-mono">Output Finale</span>
+                        </div>
+                    </div>
+                    <div class="p-4 p-5 h-[600px] overflow-y-auto">
+                        <div class="text-[13px] leading-relaxed text-slate-300 font-sans tracking-wide" style="white-space: pre-wrap;">{{ parsed_data.parsed_text }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Script Injection per Download -->
+    {% if parsed_data %}
+    <script type="application/json" id="parsed-data-storage">
+    {
+        "domain": {{ parsed_data.domain | tojson }},
+        "title": {{ parsed_data.title | tojson }},
+        "html_text": {{ parsed_data.html_text | tojson }},
+        "parsed_text": {{ parsed_data.parsed_text | tojson }}
+    }
+    </script>
+    <script>
+    function downloadResult(type) {
+        const storage = document.getElementById('parsed-data-storage');
+        if (!storage) return;
+        const data = JSON.parse(storage.textContent);
+        
+        let content, ext;
+        if (type === 'html') {
+            content = data.html_text;
+            ext = 'html';
+        } else {
+            content = data.parsed_text;
+            ext = 'md';
+        }
+        
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        const safeTitle = data.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        a.download = `${safeTitle}_${type}.${ext}`;
+        
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+    </script>
+    {% endif %}
+</body>
+</html>
