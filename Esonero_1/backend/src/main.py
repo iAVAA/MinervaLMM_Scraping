@@ -3,11 +3,13 @@ from pydantic import BaseModel
 import json
 import os
 from src.parsers.wikipedia_parser import WikipediaParser
+from src.parsers.governo_parser import GovernoParser
 from src.evaluator.metrics import token_level_eval
 from urllib.parse import urlparse, unquote
 
 app = FastAPI(title="Esonero 1 Backend")
 wiki_parser = WikipediaParser()
+governo_parser = GovernoParser()
 
 class EvaluationRequest(BaseModel):
     parsed_text: str
@@ -28,6 +30,11 @@ async def parse_url(url: str):
     if domain == "en.wikipedia.org":
         try:
             return await wiki_parser.parse(url)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    elif domain == "www.governo.it":
+        try:
+            return await governo_parser.parse(url)
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
     else:
@@ -88,6 +95,13 @@ async def full_gs_eval(domain: str):
         
         if domain == "en.wikipedia.org":
             parsed_data = await wiki_parser.parse(url)
+            parsed_text = parsed_data["parsed_text"]
+            metrics = token_level_eval(parsed_text, gold_text)
+            
+            for k in total_metrics.keys():
+                total_metrics[k] += metrics[k]
+        elif domain == "www.governo.it":
+            parsed_data = await governo_parser.parse(url)
             parsed_text = parsed_data["parsed_text"]
             metrics = token_level_eval(parsed_text, gold_text)
             

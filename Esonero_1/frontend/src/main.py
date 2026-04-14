@@ -23,9 +23,10 @@ async def home(request: Request):
                 domains = resp.json()
                 
             try:
-                gs_resp = await client.get(f"{BACKEND_URL}/full_gold_standard?domain=en.wikipedia.org")
-                if gs_resp.status_code == 200:
-                    gs_list = gs_resp.json()
+                for d in domains.get("domains", []):
+                    gs_resp = await client.get(f"{BACKEND_URL}/full_gold_standard?domain={d}")
+                    if gs_resp.status_code == 200:
+                        gs_list.extend(gs_resp.json())
             except:
                 pass
 
@@ -75,9 +76,10 @@ async def parse(request: Request, url: str = Form(...)):
                 domains = d_resp.json()
             
             try:
-                gsl_resp = await client.get(f"{BACKEND_URL}/full_gold_standard?domain=en.wikipedia.org")
-                if gsl_resp.status_code == 200:
-                    gs_list = gsl_resp.json()
+                for d in domains.get("domains", []):
+                    gsl_resp = await client.get(f"{BACKEND_URL}/full_gold_standard?domain={d}")
+                    if gsl_resp.status_code == 200:
+                        gs_list.extend(gsl_resp.json())
             except:
                 pass
                 
