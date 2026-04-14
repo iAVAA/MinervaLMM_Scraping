@@ -31,9 +31,15 @@ async def home(request: Request):
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(f"{BACKEND_URL}/domains")
             if resp.status_code == 200:
-                domains_data = resp.json()
-                domains = domains_data.get("domains", [])
-                gs_list = await get_all_gs_data(client, domains)
+                domains = resp.json()
+                
+            try:
+                for d in domains.get("domains", []):
+                    gs_resp = await client.get(f"{BACKEND_URL}/full_gold_standard?domain={d}")
+                    if gs_resp.status_code == 200:
+                        gs_list.extend(gs_resp.json())
+            except:
+                pass
 
     except Exception as e:
         error = f"Cannot connect to backend: {e}"
@@ -79,9 +85,15 @@ async def parse(request: Request, url: str = Form(...)):
             # Refresh domains and gs_list
             d_resp = await client.get(f"{BACKEND_URL}/domains")
             if d_resp.status_code == 200:
-                domains_data = d_resp.json()
-                domains = domains_data.get("domains", [])
-                gs_list = await get_all_gs_data(client, domains)
+                domains = d_resp.json()
+            
+            try:
+                for d in domains.get("domains", []):
+                    gsl_resp = await client.get(f"{BACKEND_URL}/full_gold_standard?domain={d}")
+                    if gsl_resp.status_code == 200:
+                        gs_list.extend(gsl_resp.json())
+            except:
+                pass
                 
     except Exception as e:
         error = str(e)
