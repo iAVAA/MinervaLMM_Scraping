@@ -1,15 +1,16 @@
 # Web Extraction Engine & Parser Evaluation
 
-Un'architettura a microservizi pensata per estrarre in markdown, sgrezzare da artefatti DOM e valutare il testo di grandi portali documentali (Wikipedia). Progettato con lo scopo di affinare dataset testuali puliti di altissima qualità da passare poi ad algoritmi di intelligenza artificiale (LLM / RAG).
+Un'architettura a microservizi pensata per estrarre in markdown, sgrezzare da artefatti DOM e valutare il testo di grandi portali documentali (Wikipedia, NobelPrize, etc.). Progettato con lo scopo di affinare dataset testuali puliti di altissima qualità da passare poi ad algoritmi di intelligenza artificiale (LLM / RAG).
 
 ## Requisiti di Sistema
 - **Docker** e **Docker Compose** installati sulla macchina target.
 - Nessuna dipendenza Python locale è richiesta, i container isolano l'intero kernel.
 
 ## Struttura della Piattaforma
-- `/backend`: Motore logico (Porta 8003). Scritto in FastAPI, implementa uno scraper browser-based (`Crawl4AI` su Playwright) potenziato con un pulitore DOM Regex-JavaScript, e include un motore di valutazione matematica di somiglianza testuale ad altissime performance basate su codice C (`Levenshtein`, `rouge-score`).
-- `/frontend`: Dashboard UI (Porta 8080). Un'interfaccia single-page minimale e moderna costruita ad-hoc con Tailwind CSS e template rendering Jinja2 nativo.
-- `/gs_data`: Contiene il dizionario del proprio *Gold Standard* in JSON usato come ancoraggio di riferimento.
+- `/backend`: Motore logico (Porta 8003). Scritto in FastAPI, implementa uno scraper browser-based (`Crawl4AI` su Playwright) potenziato con un pulitore DOM Regex-JavaScript, e include un motore di valutazione matematica di somiglianza testuale basato su standard industriali (`Levenshtein`, `rouge-score`).
+- `/frontend`: Dashboard UI (Porta 8080). Un'interfaccia responsive costruita con Tailwind CSS e template rendering Jinja2 nativo.
+- `/gs_data`: Contiene il dataset di riferimento (*Gold Standard*) in formato JSON suddiviso per dominio.
+- `/backend/src/parsers`: Repository dei parser modulari specifici per dominio (Wikipedia, NobelPrize, Governo, RomaToday).
 
 ## Avvio del Sistema
 

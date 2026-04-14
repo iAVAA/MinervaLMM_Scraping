@@ -8,11 +8,22 @@ app = FastAPI(title="Esonero 1 Frontend")
 
 templates = Jinja2Templates(directory="templates")
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:8003")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8003")
+
+async def get_all_gs_data(client: httpx.AsyncClient, domains: list):
+    all_gs = []
+    for domain in domains:
+        try:
+            resp = await client.get(f"{BACKEND_URL}/full_gold_standard?domain={domain}")
+            if resp.status_code == 200:
+                all_gs.extend(resp.json())
+        except:
+            continue
+    return all_gs
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    domains = {"domains": []}
+    domains_data = {"domains": []}
     gs_list = []
     error = None
     
@@ -20,14 +31,9 @@ async def home(request: Request):
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(f"{BACKEND_URL}/domains")
             if resp.status_code == 200:
-                domains = resp.json()
-                
-            try:
-                gs_resp = await client.get(f"{BACKEND_URL}/full_gold_standard?domain=en.wikipedia.org")
-                if gs_resp.status_code == 200:
-                    gs_list = gs_resp.json()
-            except:
-                pass
+                domains_data = resp.json()
+                domains = domains_data.get("domains", [])
+                gs_list = await get_all_gs_data(client, domains)
 
     except Exception as e:
         error = f"Cannot connect to backend: {e}"
@@ -36,7 +42,7 @@ async def home(request: Request):
         request=request,
         name="index.html",
         context={
-            "domains": domains.get("domains", []),
+            "domains": domains_data.get("domains", []),
             "error": error,
             "gs_list": gs_list
         }
@@ -46,8 +52,9 @@ async def home(request: Request):
 async def parse(request: Request, url: str = Form(...)):
     parsed_data = None
     metrics = None
+    gs_data = None
     error = None
-    domains = {"domains": []}
+    domains_data = {"domains": []}
     gs_list = []
     
     try:
@@ -69,17 +76,12 @@ async def parse(request: Request, url: str = Form(...)):
             else:
                 error = resp.json().get("detail", "Error during parsing")
 
-            # Recupera domini e gs_list per mantenere la UI compatta
+            # Refresh domains and gs_list
             d_resp = await client.get(f"{BACKEND_URL}/domains")
             if d_resp.status_code == 200:
-                domains = d_resp.json()
-            
-            try:
-                gsl_resp = await client.get(f"{BACKEND_URL}/full_gold_standard?domain=en.wikipedia.org")
-                if gsl_resp.status_code == 200:
-                    gs_list = gsl_resp.json()
-            except:
-                pass
+                domains_data = d_resp.json()
+                domains = domains_data.get("domains", [])
+                gs_list = await get_all_gs_data(client, domains)
                 
     except Exception as e:
         error = str(e)
@@ -90,8 +92,9 @@ async def parse(request: Request, url: str = Form(...)):
         context={
             "parsed_data": parsed_data,
             "metrics": metrics,
+            "gs_data": gs_data,
             "error": error,
-            "domains": domains.get("domains", []),
+            "domains": domains_data.get("domains", []),
             "gs_list": gs_list
         }
     )

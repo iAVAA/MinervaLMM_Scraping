@@ -3,15 +3,28 @@ from rouge_score import rouge_scorer
 import re
 from rouge_score import rouge_scorer
 
-def tokenize(text: str) -> set:
+def normalize_text(text: str) -> str:
     if not text:
+        return ""
+    # Remove markdown formatting characters
+    text = re.sub(r'[\*\#\_\>\-\=`]', ' ', text)
+    # Remove URLs if any survived
+    text = re.sub(r'https?://\S+|www\.\S+', ' ', text)
+    # Normalize whitespace
+    text = re.sub(r'\s+', ' ', text)
+    return text.lower().strip()
+
+def tokenize(text: str) -> set:
+    norm = normalize_text(text)
+    if not norm:
         return set()
-    return set(text.lower().split())
+    return set(norm.split())
 
 def get_ngrams(text: str, n: int) -> set:
-    if not text or len(text) < n:
+    norm = normalize_text(text)
+    if not norm or len(norm) < n:
         return set()
-    return set(text[i:i+n] for i in range(len(text)-n+1))
+    return set(norm[i:i+n] for i in range(len(norm)-n+1))
 
 def token_level_eval(parsed_text: str, gold_text: str) -> dict:
     # 1. Base Token Level Metrics (Precision, Recall, F1)
@@ -33,8 +46,8 @@ def token_level_eval(parsed_text: str, gold_text: str) -> dict:
 
     # 3. ROUGE-L Score
     scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
-    g_str = gold_text.lower().strip()
-    p_str = parsed_text.lower().strip()
+    g_str = normalize_text(gold_text)
+    p_str = normalize_text(parsed_text)
     
     if not g_str:
         rouge_l = 0.0

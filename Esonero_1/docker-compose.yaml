@@ -13,6 +13,8 @@ services:
       - ./gs_data:/app/gs_data
     environment:
       - PORT=8003
+      - PYTHONUTF8=1
+      - PYTHONPATH=/app/backend
     networks:
       - esonero_network
       
@@ -26,6 +28,8 @@ services:
       - ./frontend:/app/frontend
     environment:
       - BACKEND_URL=http://backend:8003
+      - PYTHONUTF8=1
+      - PYTHONPATH=/app/frontend
     depends_on:
       - backend
     networks:

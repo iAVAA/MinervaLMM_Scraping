@@ -1,11 +1,12 @@
 import asyncio
-import json
 import re
 from urllib.parse import urlparse, unquote
-from bs4 import BeautifulSoup
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 
 class NobelParser:
+    """
+    Parser dedicated to NobelPrize.org.
+    """ 
     def __init__(self):
         self.browser_config = BrowserConfig(
             headless=True,
@@ -13,117 +14,130 @@ class NobelParser:
             viewport_height=1080
         )
         
-        # Analogous to Wikipedia's JS cleanup script
         self.js_cleanup_script = """
-        const selectors = [
-            '.site-header', '.site-footer', '.nav-main', '.nav-secondary', 
-            '.share-buttons', '.social-links', '.citation-container', 
-            '.related-links', '.sidebar', '.menu-toggle', '#mobile-menu',
-            '.cookie-notice', '.ad-slot', '.hidden-print', '.noprint',
-            'form', 'input', 'button', 'textarea', 'select', 'iframe',
-            '.back-to-top', '.breadcrumb', '.pagination', '.laureate-nav',
-            '.newsletter-signup', '.overlay', '.modal'
-        ];
-        
-        // Remove known noise
-        document.querySelectorAll(selectors.join(', ')).forEach(el => el.remove());
-        
-        // Remove specific sections by ID if helpful (analogous to Wikipedia's endSectionIds)
-        const endSections = ['related-items', 'further-reading'];
-        endSections.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.remove();
+        const acceptCookies = () => {
+            const acceptBtn = document.querySelector('#onetrust-accept-btn-handler') || 
+                              document.querySelector('.ot-pc-refusal-link') ||
+                              document.querySelector('#onetrust-policy-text');
+            if (acceptBtn && acceptBtn.click) acceptBtn.click();
+            
+            const blockers = [
+                '#onetrust-consent-sdk', '.ot-sdk-container', '.onetrust-pc-dark-filter',
+                '.cookie-notice', '.ad-slot', '.overlay', '.modal'
+            ];
+            blockers.forEach(s => {
+                const el = document.querySelector(s);
+                if (el) {
+                    el.style.display = 'none';
+                    el.style.visibility = 'hidden';
+                    el.remove();
+                }
+            });
+            
+            document.body.style.overflow = 'auto';
+            document.documentElement.style.overflow = 'auto';
+        };
+
+        const cleanupUI = () => {
+            const content = document.querySelector('.page-content') || 
+                            document.querySelector('article') || 
+                            document.querySelector('main#content');
+            if (content) {
+                const contentHtml = content.innerHTML;
+                document.body.innerHTML = '<div class="page-content">' + contentHtml + '</div>';
+            }
+            
+            const noise = [
+                '.share-buttons', '.social-links', '.citation-container', 
+                '.laureate-nav', '.copyright', 'footer', 'nav', 
+                'aside', 'select', 'button', 'form', 'input', 'label',
+                '.btn', '.menu', '.navigation', '.skip-link',
+                'figcaption', '.figcaption__attribution', '.wp-caption-text',
+                '.video-container', '.video-player', '.video-caption', 
+                '.video-title', 'iframe', '.wp-block-embed', '.wp-block-video',
+                'video', '.smalltext'
+            ];
+            noise.forEach(s => document.querySelectorAll(s).forEach(el => el.remove()));
+        };
+
+        return new Promise(resolve => {
+            acceptCookies();
+            setTimeout(() => {
+                cleanupUI();
+                resolve();
+            }, 2500);
         });
         """
         
         self.crawler_config = CrawlerRunConfig(
-            css_selector="main#content", 
-            excluded_tags=["nav", "footer", "aside", "header", "form", "script", "style"],
             js_code=self.js_cleanup_script,
+            wait_for="css:.page-content", 
             word_count_threshold=5,
-            exclude_external_links=False
+            exclude_external_links=True,
+            remove_overlay_elements=True
         )
 
     async def parse(self, url: str) -> dict:
         domain = urlparse(url).netloc
-        if domain not in ["www.nobelprize.org", "nobelprize.org"]:
-             raise ValueError("Questo parser supporta solo il dominio www.nobelprize.org")
-
         async with AsyncWebCrawler(config=self.browser_config) as crawler:
-            # We add a small wait to allow for dynamic content hydration
-            # NobelPrize.org is more dynamic than Wikipedia
             result = await crawler.arun(url=url, config=self.crawler_config)
             
-            if not result.success or len(result.markdown) < 100:
-                # Fallback: try without selector and with more wait
-                print("[DEBUG] Targeted crawl failed or too short, falling back...")
-                self.crawler_config.css_selector = None
-                # Inject a sleep in JS
-                self.crawler_config.js_code = "await new Promise(r => setTimeout(r, 4000)); " + self.js_cleanup_script
+            if not result.success:
+                self.crawler_config.wait_for = None
                 result = await crawler.arun(url=url, config=self.crawler_config)
-                # Restore config
-                self.crawler_config.css_selector = "main#content"
-                self.crawler_config.js_code = self.js_cleanup_script
+                self.crawler_config.wait_for = "css:.page-content"
 
-            raw_md = result.markdown
-            
-            # Markdown cleaning (analogous to WikipediaParser)
-            # 1. Remove images and links
-            clean_text = re.sub(r'!\[.*?\]\(.*?\)', '', raw_md)
+            if not result.success:
+                raise Exception(f"NobelPrize crawl failed: {result.error_message}")
+
+            clean_text = re.sub(r'!\[.*?\]\(.*?\)', '', result.markdown)
             clean_text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', clean_text)
+            clean_text = re.sub(r'<(https?://[^>]+)>', '', clean_text)
+            clean_text = re.sub(r'https?://\S+|www\.\S+', '', clean_text, flags=re.IGNORECASE)
             
-            # 2. Convert to single line
-            clean_text = clean_text.replace('\n', ' ').replace('\r', ' ')
+            clean_text = clean_text.replace('_', ' ')
+            clean_text = re.sub(r'(?i)\bTranslation\b', ' ', clean_text)
+            clean_text = re.sub(r'[<>]', ' ', clean_text)
+            clean_text = re.sub(r'^\s*>\s*', ' ', clean_text, flags=re.MULTILINE)
             
-            # 3. Remove metadata and navigation noise
             noise_patterns = [
-                r'(?i)To cite this section.*$',
+                r'(?i)Skip to content',
                 r'(?i)Go to the top of the page',
-                r'(?i)Share this',
-                r'(?i)MLA style:.*',
-                r'(?i)Enhanced Page Navigation'
+                r'(?i)Back to top',
+                r'(?i)Navigate to:',
+                r'(?i)By clicking.*?cookie list',
+                r'(?i)Privacy Preference Center',
+                r'(?i)Targeting Cookies.*?advertising',
+                r'(?i)Performance Cookies.*?performance',
+                r'(?i)Strictly Necessary Cookies.*?information',
+                r'(?i)Functional Cookies.*?properly',
+                r'(?i)manage consent preferences',
+                r'(?i)cookie list'
             ]
             for pattern in noise_patterns:
-                clean_text = re.sub(pattern, '', clean_text)
+                clean_text = re.sub(pattern, ' ', clean_text, flags=re.DOTALL)
             
-            # 4. Remove headers symbols and normalize whitespace
+            clean_text = clean_text.replace('\n', ' ').replace('\r', ' ')
             clean_text = re.sub(r'#+\s?', '', clean_text)
-            
-            # --- AGGIUNTE RICHIESTE (Analogous to WikipediaParser) ---
-            # Remove remaining brackets artifacts
             clean_text = re.sub(r'\[\s*\]|\(\s*\)|\{\s*\}', ' ', clean_text)
-            
-            # Remove repeated punctuation patterns
-            clean_text = re.sub(r'(?:[\*\.]\s*){3,}', ' ', clean_text)
-            clean_text = re.sub(r'(?:[\*\.\-~_]\s*){5,}', ' ', clean_text)
-            
-            # Remove orphan numbering
-            clean_text = re.sub(r'(?:\b\d+\.\s*[\(\)\{\}\[\]\s]*)+', ' ', clean_text)
-            
-            # Disambiguations and redundant quotes
-            clean_text = re.sub(r'\s*\\\([^)]+\\\)', '', clean_text)
-            clean_text = re.sub(r'""([^"]+)""', r'\1', clean_text)
-            
-            # Final whitespace normalization
             clean_text = re.sub(r'\s+', ' ', clean_text).strip()
             
-            # 5. Remove URLs
-            clean_text = re.sub(r'https?://\S+|www\.\S+', '', clean_text, flags=re.IGNORECASE)
+            clean_text = re.sub(r'\[\s*\d+[\s\d\-\,]*\]', ' ', clean_text)
+            clean_text = re.sub(r'\[\s*(PDF|DOC|XLS|ZIP)\s*\]', ' ', clean_text, flags=re.IGNORECASE)
+            clean_text = re.sub(r'\s+', ' ', clean_text).strip()
 
-            # Title extraction
             path_parts = [p for p in urlparse(url).path.split('/') if p]
             if path_parts:
                 title_text = path_parts[-1].replace("-", " ").title()
-                if title_text == "Summary" and len(path_parts) >= 3:
-                     title_text = f"The Nobel Prize in {path_parts[1].title()} {path_parts[2]}"
+                if (title_text == "Summary" or title_text == "Facts") and len(path_parts) >= 3:
+                     title_text = path_parts[-2].replace("-", " ").title()
             else:
                 title_text = "Nobel Prize"
 
-            parsed_data = {
+            return {
                 "url": url,
                 "domain": domain,
                 "title": title_text,
                 "html_text": result.html,
                 "parsed_text": clean_text
             }
-            return parsed_data

@@ -21,11 +21,13 @@ class WikipediaParser:
             '.toc', '.ambox', '.noprint', '.mw-empty-elt', '.dmbox', '.box-Multiple_issues', '.hatnote',
             '.shortdescription', '.coordinates', 'table', 'sup', '.IPA', '.unicode', '.citation',
             'ol.references', '.references', '.mw-indicators', '#coordinates',
-            'form', 'input', 'button', 'textarea', 'select'
+            'form', 'input', 'button', 'textarea', 'select',
+            '.infobox-caption', '.wp-caption-text', 'caption',
+            '.catlinks', '#catlinks', '.mw-authority-control', '.asst-links'
         ];
         document.querySelectorAll(selectors.join(', ')).forEach(el => el.remove());
 
-        const endSectionIds = ['References', 'Bibliography', 'See_also', 'External_links', 'Further_reading', 'Notes', 'Note', 'Bibliografia', 'Voci_correlate', 'Collegamenti_esterni', 'Citations', 'Sources', 'Reference', 'Notes_and_references', 'References_and_notes', 'Works_cited', 'General_references'];
+        const endSectionIds = ['See_also', 'References', 'Bibliography', 'External_links', 'Further_reading', 'Notes', 'Citations', 'Authority_control', 'Categories'];
         endSectionIds.forEach(id => {
             const span = document.getElementById(id);
             if (span) {
@@ -58,12 +60,16 @@ class WikipediaParser:
 
         async with AsyncWebCrawler(config=self.browser_config) as crawler:
             result = await crawler.arun(url=url, config=self.crawler_config)
+            if not result.success:
+                raise Exception(f"Crawl failed: {result.error_message}")
+                
             raw_md = result.markdown
             
+            # Truncation at end sections
             end_sections = [
                 'See also', 'References', 'External links', 'Further reading',
                 'Bibliography', 'Notes', 'Citations', 'Sources', 'Works cited', 
-                'General references', 'Notes and references'
+                'General references', 'Notes and references', 'Authority control', 'Categories'
             ]
             for section in end_sections:
                 pattern = r'(?mi)^#{2,5}\s*' + re.escape(section) + r'\b.*$'
@@ -71,57 +77,55 @@ class WikipediaParser:
                 if match:
                     raw_md = raw_md[:match.start()]
             
+            # Cleanup
             clean_text = re.sub(r'!\[.*?\]\(.*?\)', '', raw_md)
             clean_text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', clean_text)
-            clean_text = re.sub(r'\[\d+\]', '', clean_text)
-            clean_text = re.sub(r'#+\s?', '', clean_text)
+            clean_text = re.sub(r'\[\d+\]', ' ', clean_text)
+            clean_text = re.sub(r'#+\s?', ' ', clean_text)
             clean_text = clean_text.replace('\n', ' ').replace('\r', ' ')
-            clean_text = re.sub(r'FOOTNOTE[A-Z0-9]*', '', clean_text, flags=re.IGNORECASE)
-            clean_text = re.sub(r'https?://\S+|www\.\S+', '', clean_text, flags=re.IGNORECASE)
-            clean_text = re.sub(r'(?:ISBN|doi|ISSN|JSTOR)\s*\"?[^\"]*\"?\s*[\d\-X]*', '', clean_text, flags=re.IGNORECASE)
-            clean_text = re.sub(r'\[(?:[^\]]*needed|edit|update|page)\]', '', clean_text, flags=re.IGNORECASE)
-            clean_text = re.sub(r'\^?\s*Jump up to:[\s\(\)]*', '', clean_text, flags=re.IGNORECASE)
-            clean_text = re.sub(r'\*\*\^\*\*', '', clean_text)
-            clean_text = re.sub(r'\^\s', '', clean_text)
-            clean_text = re.sub(r'\(\s*\)|\{\s*\}|\[\s*\]', '', clean_text)
-            clean_text = re.sub(r'\*\[c\.\]:\scirca', '', clean_text, flags=re.IGNORECASE)
-            clean_text = re.sub(r'\(Subscription or participating institution membership required\.\)', '', clean_text, flags=re.IGNORECASE)
-            clean_text = re.sub(r'This article incorporates text from this source, which is in the public domain\.?', '', clean_text, flags=re.IGNORECASE)
-            clean_text = re.sub(r'CS1 maint:.*?(?=\n|$)', '', clean_text, flags=re.IGNORECASE)
-            clean_text = re.sub(r'Archived\s+.*?at the Wayback Machine', '', clean_text, flags=re.IGNORECASE)
-            clean_text = re.sub(r'WikiMiniAtlas.*?(?=\n|$)', '', clean_text, flags=re.IGNORECASE)
             
-            # --- AGGIUNTE RICHIESTE ---
-            # 14. Rimuove macro template residui
-            clean_text = re.sub(r'`?\{\{\s*citation[^}]*\}\}`?', '', clean_text, flags=re.IGNORECASE)
-            clean_text = re.sub(r'`?\{\{cite[^}]+\}\}`?', '', clean_text, flags=re.IGNORECASE)
-            clean_text = re.sub(r'(?:["`\'])?Template:Citation[^\)]*\)?(?:["`\'])?', '', clean_text, flags=re.IGNORECASE)
-            clean_text = re.sub(r'\{\{[^}]+\}\}', '', clean_text) # Catch-all per {{...}} residui
+            # Parentheses and brackets cleanup
+            for _ in range(2):
+                clean_text = re.sub(r'\(\s*[;,\s]*\)', ' ', clean_text)
+                clean_text = re.sub(r'\[\s*[;,\s]*\]', ' ', clean_text)
             
-            # 15. Rimuove pattern ripetuti di punteggiatura (es: * * *, *.*.*.)
+            # Common artifacts
+            clean_text = re.sub(r'(?i)edit|citation needed|Jump up to', ' ', clean_text)
+            clean_text = re.sub(r'https?://\S+|www\.\S+', ' ', clean_text, flags=re.IGNORECASE)
+            clean_text = re.sub(r'\{\{[^}]+\}\}', ' ', clean_text)
+            
+            # Repeated punctuation and whitespace
             clean_text = re.sub(r'(?:[\*\.]\s*){3,}', ' ', clean_text)
-            clean_text = re.sub(r'(?:[\*\.\-~_]\s*){5,}', ' ', clean_text)
             
-            # 16. Pialla numerazioni orfane create dai drop delle references
-            clean_text = re.sub(r'(?:\b\d+\.\s*[\(\)\{\}\[\]\s]*)+', ' ', clean_text)
+            # --- CLEANUP REDUNDANCIES ---
+            # Handles things like: The Swan's Way "Swan's Way (footpath)") 
+            # by removing common nested link artifacts.
+            clean_text = re.sub(r'["\']([^"\']+)["\']\s*\(\1[^)]*\)', r'\1', clean_text)
+            clean_text = re.sub(r'([^ ]+)\s*\(\1[^)]*\)', r'\1', clean_text)
             
-            # 17. Rimuove spazi vuoti multipli
+            # --- REFINED TRAILING TRASH REMOVAL ---
+            # Remove trailing bullet lists (minimum 2 items) at the very end
+            # only if they match a pattern of navigational links (short phrases).
+            clean_text = re.sub(r'(?:\s*\*\s*[^#\*]{2,40}){2,}\.?$', '', clean_text).strip()
+            
+            # Remove trailing parenthetical boilerplate
+            clean_text = re.sub(r'\s*\([^)]*(?:link|map|archive|original|reference)[^)]*\)\.?$', '', clean_text, flags=re.IGNORECASE)
+            
+            # Disambiguations and quote artifacts
+            clean_text = clean_text.replace('""', ' ')
+            clean_text = re.sub(r'\\([()])', r'\1', clean_text)
+            clean_text = clean_text.replace('\\', '')
+            clean_text = re.sub(r'\[\s*(?:PDF|DOC|XLS|ZIP)\s*\]', ' ', clean_text, flags=re.IGNORECASE)
+            
             clean_text = re.sub(r'\s+', ' ', clean_text).strip()
-
-            # 18. Removes escaped parenthetical disambiguations (e.g., \(mythology\))
-            clean_text = re.sub(r'\s*\\\([^)]+\\\)', '', clean_text)
-
-            # 19. Removes redundant double quotes surrounding single words or phrases (e.g., ""Neptune"" -> Neptune)
-            clean_text = re.sub(r'""([^"]+)""', r'\1', clean_text)
 
             path_end = urlparse(url).path.split('/')[-1]
             title_text = unquote(path_end).replace("_", " ")
 
-            parsed_data = {
+            return {
                 "url": url,
                 "domain": domain,
                 "title": title_text,
                 "html_text": result.html,
                 "parsed_text": clean_text
             }
-            return parsed_data
