@@ -30,56 +30,54 @@ def get_ngrams(text: str, n: int) -> set:
     return set(norm[i:i+n] for i in range(len(norm)-n+1))
 
 def token_level_eval(parsed_text: str, gold_text: str) -> dict:
-    # 1. Base Token Level Metrics (Precision, Recall, F1)
-    parsed_tokens = tokenize(parsed_text)
-    gold_tokens = tokenize(gold_text)
-    
-    intersection = parsed_tokens.intersection(gold_tokens)
-    
-    precision = len(intersection) / len(parsed_tokens) if parsed_tokens else 0.0
-    recall = len(intersection) / len(gold_tokens) if gold_tokens else 0.0
-    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
-    
-    # 2. Jaccard Index (Character 3-grams)
-    p_3grams = get_ngrams(parsed_text.lower(), 3)
-    g_3grams = get_ngrams(gold_text.lower(), 3)
-    inter_3g = p_3grams.intersection(g_3grams)
-    union_3g = p_3grams.union(g_3grams)
-    jaccard = len(inter_3g) / len(union_3g) if union_3g else 0.0
-
-    # 3. ROUGE-L Score
-    scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
+    # Normalizza una volta sola e riusa
     g_str = normalize_text(gold_text)
     p_str = normalize_text(parsed_text)
-    
+
+    # 1. Token-level metrics (Precision, Recall, F1) — obbligatori
+    parsed_tokens = tokenize(parsed_text)
+    gold_tokens   = tokenize(gold_text)
+    intersection  = parsed_tokens & gold_tokens
+
+    precision = len(intersection) / len(parsed_tokens) if parsed_tokens else 0.0
+    recall    = len(intersection) / len(gold_tokens)   if gold_tokens   else 0.0
+    f1 = (2 * precision * recall / (precision + recall)
+          if (precision + recall) > 0 else 0.0)
+
+    # 2. Jaccard su 3-grammi (FIX: usa p_str/g_str già normalizzati)
+    p_3grams = get_ngrams(p_str, 3)
+    g_3grams = get_ngrams(g_str, 3)
+    union_3g  = p_3grams | g_3grams
+    jaccard   = len(p_3grams & g_3grams) / len(union_3g) if union_3g else 0.0
+
     if not g_str:
-        rouge_l = 0.0
-        cer = 0.0
-        wer = 0.0
+        rouge_l = cer = wer = 0.0
     else:
-        scores = scorer.score(g_str, p_str)
-        rouge_l = scores['rougeL'].fmeasure
-        
-        # 4. Error Rates (CER / WER) via Levenshtein
+        # 3. ROUGE-L
+        scorer  = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
+        rouge_l = scorer.score(g_str, p_str)['rougeL'].fmeasure
+
+        # 4. CER
         cer = Levenshtein.distance(p_str, g_str) / len(g_str)
-        
+
+        # 5. WER (FIX: rapidfuzz supporta liste, python-Levenshtein no)
+        from rapidfuzz.distance import Levenshtein as RLev
         p_words = p_str.split()
         g_words = g_str.split()
-        wer = Levenshtein.distance(p_words, g_words) / len(g_words) if g_words else 0.0
-    # 5. Tag Leakage Rate (Heuristic Metric)
-    # Cerca artefatti web rimasti nel payload: <tag>, class=, http://, &nbsp;, [] vuoti
+        wer = RLev.distance(p_words, g_words) / len(g_words) if g_words else 0.0
+
+    # 6. Tag leakage
     leakage_pattern = r'(<\/?\w+>|class=|http[s]?://|&\w+;|\[\s*\]|\(\s*\)|\{\s*\})'
-    artifacts_found = len(re.findall(leakage_pattern, parsed_text, flags=re.IGNORECASE))
-    p_words_count = len(parsed_tokens)
-    leakage = artifacts_found / p_words_count if p_words_count > 0 else 0.0
-    
+    artifacts       = len(re.findall(leakage_pattern, parsed_text, flags=re.IGNORECASE))
+    leakage         = artifacts / len(parsed_tokens) if parsed_tokens else 0.0
+
     return {
         "precision": float(precision),
-        "recall": float(recall),
-        "f1": float(f1),
-        "jaccard": float(jaccard),
-        "cer": float(cer),
-        "wer": float(wer),
-        "rouge_l": float(rouge_l),
-        "leakage": float(leakage)
+        "recall":    float(recall),
+        "f1":        float(f1),
+        "jaccard":   float(jaccard),
+        "cer":       float(cer),
+        "wer":       float(wer),
+        "rouge_l":   float(rouge_l),
+        "leakage":   float(leakage),
     }
