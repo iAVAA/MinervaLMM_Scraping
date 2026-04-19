@@ -13,14 +13,10 @@ class RomaTodayParser:
 
         self.js_cleanup_script = """
         const selectors = [
-            '.l-entry__byline',
-            '.u-label-02','.l-entry__byline','.c-stickyplayer',
-            'a','.c-story__badge','.kicker-approfondimento',f
-            'a.u-color-theme.u-label-02.u-inline-block',
             'footer', 'nav', 'aside',
             '.c-smb', '.o-link-category', '.article-authors', '.article-date',
             '.c-announcement', '.c-social-bar', '.c-related-articles',
-            '[class*="social"]', '[class*="share"]', '[class*="adv"]',
+            '[class*="share"]', '[class*="adv"]',
             '[class*="banner"]', '[class*="sponsor"]', '[class*="newsletter"]',
             '[class*="cookie"]', '[class*="gdpr"]', '[class*="popup"]',
             'script', 'style', 'noscript', 'iframe', 'form',
@@ -51,9 +47,9 @@ class RomaTodayParser:
         """
 
         self.crawler_config = CrawlerRunConfig(
-            css_selector=".l-entry__title, .l-entry__summary, .l-entry__body",
+            css_selector=" .u-p-base, .l-entry__header , .c-entry ",
             js_code=self.js_cleanup_script,
-            excluded_tags=["nav", "footer", "aside", "form", "script", "style","header"],
+            excluded_tags=["nav", "footer", "aside", "form", "script", "style"],
             word_count_threshold=5,
             exclude_external_links=False,
             magic=True,
@@ -113,23 +109,10 @@ class RomaTodayParser:
             raw_md = result.markdown or ""
 
             # Pipeline di pulizia del testo markdown
-            
             clean_text = re.sub(r'!\[.*?\]\(.*?\)', '', raw_md) # Rimuove le immagini Markdown
             clean_text = re.sub(r'\[([^\]]*)\]\([^\)]+\)', r'\1', clean_text)
             clean_text = re.sub(r'\[\d+\]', '', clean_text)
             clean_text = re.sub(r'https?://\S+|www\.\S+', '', clean_text, flags=re.IGNORECASE)
-
-
-            # FILTRI AVANZATI: Paywall e Social Embed (Versione DOTALL infallibile)
-            
-            # Taglia tutto a partire dalla dicitura per gli abbonati fino alla fine del testo
-            clean_text = re.sub(r'_?Il contenuto è riservato agli abbonati\._?.*', '', clean_text, flags=re.IGNORECASE | re.DOTALL)
-            
-            # Fallback in caso mancasse la prima frase, taglia dal pulsante "Leggi tutto l'articolo"
-            clean_text = re.sub(r'Leggi tutto l\'articolo.*', '', clean_text, flags=re.IGNORECASE | re.DOTALL)
-            
-            # Nel caso scappasse il minutaggio isolato
-            clean_text = re.sub(r'\*?\*?\d+\*?\*?\s+minuti di lettura', '', clean_text, flags=re.IGNORECASE)
 
             clean_text = re.sub(r'\(\s*\)|\{\s*\}', '', clean_text)
             clean_text = re.sub(r'\{\{[^}]+\}\}', '', clean_text)
@@ -137,11 +120,20 @@ class RomaTodayParser:
             clean_text = re.sub(r'""([^"]+)""', r'\1', clean_text)
             clean_text = re.sub(r'\n{3,}', '\n\n', clean_text).strip()
             
-            # Rimozione del footer app (compresi eventuali "_" del markdown)
-            clean_text = re.sub(
-                r'_?RomaToday è anche su Mobile.*?aggiornato\.?_?', 
-                '', clean_text, flags=re.IGNORECASE
-            )
+            # Rimuove le linee orizzontali in markdown (es. *** o ---) ma SALVA gli asterischi singoli (*) per le liste
+            # clean_text = re.sub(r'(?:---|___|\*\*\*(?!\*))\s*', '', clean_text)
+            
+            # Rimozione date testuali
+            #clean_text = re.sub(
+            #     r'\b\d{1,2}\s+(?:gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)\s+\d{4}(?:,\s*\d{2}:\d{2})?\b',
+            #     '', clean_text, flags=re.IGNORECASE
+            #)
+
+            # Rimozione super-aggressiva del footer app (compresi eventuali "_" del markdown)
+            #clean_text = re.sub(
+            #    r'_?RomaToday è anche su Mobile.*?aggiornato\.?_?', 
+            #    '', clean_text, flags=re.IGNORECASE
+            #)
             
             # ELIMINAZIONE FANTASMA DEL VIDEO E DI INSTAGRAM
             clean_text = re.sub(r'_?Video\s+[a-zA-Z]+Today_?\s*>?\s*', '', clean_text, flags=re.IGNORECASE)
@@ -149,6 +141,16 @@ class RomaTodayParser:
 
             # Elimina la parola isolata "social" rimasta appesa
             clean_text = re.sub(r'\s+social\s+(?=[A-Z])', ' ', clean_text)
+
+            clean_text = re.sub(
+                r'_?RomaToday è anche su Mobile.*?aggiornato\.?_?', 
+                '', clean_text, flags=re.IGNORECASE
+            )
+            
+            #clean_text = html.unescape(clean_text)
+            #clean_text = re.sub(r'\s+', ' ', clean_text).strip()
+
+            # RICOSTRUZIONE DEL TESTO FINALE
             
 
             return {
