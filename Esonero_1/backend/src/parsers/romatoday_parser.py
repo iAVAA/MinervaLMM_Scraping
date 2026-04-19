@@ -13,6 +13,7 @@ class RomaTodayParser:
 
         self.js_cleanup_script = """
         const selectors = [
+            '.u-label-02',
             'footer', 'nav', 'aside',
             '.c-smb', '.o-link-category', '.article-authors', '.article-date',
             '.c-announcement', '.c-social-bar', '.c-related-articles',
@@ -146,6 +147,14 @@ class RomaTodayParser:
                 r'_?RomaToday è anche su Mobile.*?aggiornato\.?_?', 
                 '', clean_text, flags=re.IGNORECASE
             )
+            
+            clean_text = re.sub(r'_?Il contenuto è riservato agli abbonati\._?.*', '', clean_text, flags=re.IGNORECASE | re.DOTALL)
+            
+            # Fallback in caso mancasse la prima frase, taglia dal pulsante "Leggi tutto l'articolo"
+            clean_text = re.sub(r'Leggi tutto l\'articolo.*', '', clean_text, flags=re.IGNORECASE | re.DOTALL)
+            
+            # Nel caso scappasse il minutaggio isolato
+            clean_text = re.sub(r'\*?\*?\d+\*?\*?\s+minuti di lettura', '', clean_text, flags=re.IGNORECASE)
             
             #clean_text = html.unescape(clean_text)
             #clean_text = re.sub(r'\s+', ' ', clean_text).strip()
