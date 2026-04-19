@@ -16,7 +16,7 @@ async def get_all_gs_data(client: httpx.AsyncClient, domains: list):
         try:
             resp = await client.get(f"{BACKEND_URL}/full_gold_standard?domain={domain}")
             if resp.status_code == 200:
-                all_gs.extend(resp.json())
+                all_gs.extend(resp.json().get("gold_standard", []))
         except:
             continue
     return all_gs
@@ -37,7 +37,7 @@ async def home(request: Request):
                 for d in domains.get("domains", []):
                     gs_resp = await client.get(f"{BACKEND_URL}/full_gold_standard?domain={d}")
                     if gs_resp.status_code == 200:
-                        gs_list.extend(gs_resp.json())
+                        gs_list.extend(gs_resp.json().get("gold_standard", []))
             except:
                 pass
 
@@ -65,14 +65,21 @@ async def parse(request: Request, url: str = Form(...)):
     
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.get(f"{BACKEND_URL}/parse?url={url}")
+            # Get GS data first to use its html_text if available
+            gs_resp = await client.get(f"{BACKEND_URL}/gold_standard?url={url}")
+            if gs_resp.status_code == 200:
+                gs_data = gs_resp.json()
+            
+            payload = {"url": url}
+            if gs_data and gs_data.get("html_text"):
+                payload["html_text"] = gs_data["html_text"]
+                
+            resp = await client.post(f"{BACKEND_URL}/parse", json=payload)
             if resp.status_code == 200:
                 parsed_data = resp.json()
                 
                 # Check metrics if it is in GS!
-                gs_resp = await client.get(f"{BACKEND_URL}/gold_standard?url={url}")
-                if gs_resp.status_code == 200:
-                    gs_data = gs_resp.json()
+                if gs_data:
                     eval_resp = await client.post(f"{BACKEND_URL}/evaluate", json={
                         "parsed_text": parsed_data["parsed_text"],
                         "gold_text": gs_data["gold_text"]
@@ -91,7 +98,7 @@ async def parse(request: Request, url: str = Form(...)):
                 for d in domains.get("domains", []):
                     gsl_resp = await client.get(f"{BACKEND_URL}/full_gold_standard?domain={d}")
                     if gsl_resp.status_code == 200:
-                        gs_list.extend(gsl_resp.json())
+                        gs_list.extend(gsl_resp.json().get("gold_standard", []))
             except:
                 pass
                 

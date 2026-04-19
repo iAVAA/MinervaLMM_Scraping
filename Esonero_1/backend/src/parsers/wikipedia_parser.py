@@ -49,17 +49,18 @@ class WikipediaParser:
             css_selector="#mw-content-text",
             excluded_tags=["nav", "footer", "aside", "header", "form", "script", "style"],
             js_code=self.js_cleanup_script,
-            word_count_threshold=5,
+            word_count_threshold=1,
             exclude_external_links=False
         )
 
-    async def parse(self, url: str) -> dict:
+    async def parse(self, url: str, html_text: str = None) -> dict:
         domain = urlparse(url).netloc
-        if domain != "en.wikipedia.org":
-            raise ValueError("Questo parser supporta solo il dominio en.wikipedia.org")
+        if not domain.endswith("wikipedia.org"):
+            raise ValueError("Questo parser supporta solo il dominio wikipedia.org")
 
         async with AsyncWebCrawler(config=self.browser_config) as crawler:
-            result = await crawler.arun(url=url, config=self.crawler_config)
+            run_url = f"raw:{html_text}" if html_text else url
+            result = await crawler.arun(url=run_url, config=self.crawler_config)
             if not result.success:
                 raise Exception(f"Crawl failed: {result.error_message}")
                 

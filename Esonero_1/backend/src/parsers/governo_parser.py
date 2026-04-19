@@ -36,17 +36,18 @@ class GovernoParser:
             css_selector="#main",
             excluded_tags=["nav", "footer", "aside", "header", "form", "script", "style"],
             js_code=self.js_cleanup_script,
-            word_count_threshold=5,
+            word_count_threshold=1,
             exclude_external_links=False
         )
 
-    async def parse(self, url: str) -> dict:
+    async def parse(self, url: str, html_text: str = None) -> dict:
         domain = urlparse(url).netloc
-        if domain != "www.governo.it":
-            raise ValueError("Questo parser supporta solo il dominio www.governo.it")
+        if domain not in ["www.governo.it", "governo.it"]:
+            raise ValueError("Questo parser supporta solo il dominio www.governo.it o governo.it")
 
         async with AsyncWebCrawler(config=self.browser_config) as crawler:
-            result = await crawler.arun(url=url, config=self.crawler_config)
+            run_url = f"raw:{html_text}" if html_text else url
+            result = await crawler.arun(url=run_url, config=self.crawler_config)
             raw_md = result.markdown
 
             clean_text = raw_md

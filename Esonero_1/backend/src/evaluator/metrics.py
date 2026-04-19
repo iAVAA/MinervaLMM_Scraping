@@ -1,18 +1,21 @@
+import mistune
+from bs4 import BeautifulSoup
 import Levenshtein
 from rouge_score import rouge_scorer
 import re
-from rouge_score import rouge_scorer
 
 def normalize_text(text: str) -> str:
     if not text:
         return ""
-    # Remove markdown formatting characters
-    text = re.sub(r'[\*\#\_\>\-\=`]', ' ', text)
-    # Remove URLs if any survived
-    text = re.sub(r'https?://\S+|www\.\S+', ' ', text)
-    # Normalize whitespace
-    text = re.sub(r'\s+', ' ', text)
-    return text.lower().strip()
+    # Remove the markdown using mistune and BeautifulSoup
+    html = mistune.html(text)
+    soup = BeautifulSoup(html, "html.parser")
+    for tag in soup.find_all(True):
+        tag.unwrap()
+    text = re.sub(r'[ \t]+', ' ', str(soup))    # collassa spazi orizzontali (non \n)
+    text = re.sub(r'\n+', '\n', text)  # collassa nuove linee multiple in una sola
+    text = text.strip()
+    return text.lower()
 
 def tokenize(text: str) -> set:
     norm = normalize_text(text)

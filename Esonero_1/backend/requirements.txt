@@ -8,3 +8,4 @@ beautifulsoup4
 httpx
 Levenshtein>=0.25.0
 rouge-score>=0.1.2
+mistune

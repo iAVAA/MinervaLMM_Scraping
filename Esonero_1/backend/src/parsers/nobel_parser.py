@@ -72,20 +72,37 @@ class NobelParser:
         self.crawler_config = CrawlerRunConfig(
             js_code=self.js_cleanup_script,
             wait_for="css:.page-content", 
-            word_count_threshold=5,
+            word_count_threshold=1,
             exclude_external_links=True,
-            remove_overlay_elements=True
+            remove_overlay_elements=True,
+            excluded_tags=["script", "style", "nav", "footer", "aside", "header", "form"]
         )
 
-    async def parse(self, url: str) -> dict:
+    async def parse(self, url: str, html_text: str = None) -> dict:
         domain = urlparse(url).netloc
+        
+        if html_text:
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(html_text, 'html.parser')
+            for sel in ['script', 'style', '#onetrust-consent-sdk', '.ot-sdk-container', '.cookie-notice', 'nav', 'footer', 'aside', 'img', 'picture', 'source', 'figure', 'noscript', 'video', 'iframe', '.laureate-nav', '.share-buttons', '.citation-container']:
+                for el in soup.select(sel):
+                    el.decompose()
+                    
+            content = soup.select_one('.page-content') or soup.find('main', id='content') or soup.select_one('article')
+            if content:
+                # Wrap it in a clean body
+                html_text = f'<html><body><div class="page-content">{content.decode_contents()}</div></body></html>'
+            else:
+                html_text = str(soup)
+
         async with AsyncWebCrawler(config=self.browser_config) as crawler:
-            result = await crawler.arun(url=url, config=self.crawler_config)
+            run_url = f"raw:{html_text}" if html_text else url
+            result = await crawler.arun(url=run_url, config=self.crawler_config)
             
             if not result.success:
-                self.crawler_config.wait_for = None
-                result = await crawler.arun(url=url, config=self.crawler_config)
-                self.crawler_config.wait_for = "css:.page-content"
+                fallback_config = self.crawler_config.clone()
+                fallback_config.wait_for = None
+                result = await crawler.arun(url=run_url, config=fallback_config)
 
             if not result.success:
                 raise Exception(f"NobelPrize crawl failed: {result.error_message}")

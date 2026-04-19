@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build:
@@ -23,7 +21,7 @@ services:
       context: ./frontend
     container_name: esonero_frontend
     ports:
-      - "8080:8080"
+      - "8004:8004"
     volumes:
       - ./frontend:/app/frontend
     environment:
