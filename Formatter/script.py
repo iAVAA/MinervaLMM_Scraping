@@ -28,9 +28,34 @@ def main():
     # Definisce i percorsi dei file nella stessa cartella dello script
     base_dir = os.path.dirname(os.path.abspath(__file__))
     
+    title_path = os.path.join(base_dir, 'title.txt')
+    domain_path = os.path.join(base_dir, 'domain.txt')
+    url_path = os.path.join(base_dir, 'url.txt')
     html_path = os.path.join(base_dir, 'raw_html.txt')
     text_path = os.path.join(base_dir, 'raw_text.txt')
     output_path = os.path.join(base_dir, 'output.json')
+
+    # Legge i metadati base
+    try:
+        with open(title_path, 'r', encoding='utf-8') as f_title:
+            title = f_title.read().strip()
+    except FileNotFoundError:
+        print(f"Errore: Il file {title_path} non è stato trovato.")
+        return
+
+    try:
+        with open(domain_path, 'r', encoding='utf-8') as f_domain:
+            domain = f_domain.read().strip()
+    except FileNotFoundError:
+        print(f"Errore: Il file {domain_path} non è stato trovato.")
+        return
+
+    try:
+        with open(url_path, 'r', encoding='utf-8') as f_url:
+            url = f_url.read().strip()
+    except FileNotFoundError:
+        print(f"Errore: Il file {url_path} non è stato trovato.")
+        return
 
     # Legge l'HTML esattamente com'è
     try:
@@ -47,12 +72,16 @@ def main():
     except FileNotFoundError:
         print(f"Errore: Il file {text_path} non è stato trovato.")
         return
+    
 
     # Applica solo al testo la pulizia da link, note e \n
     cleaned_text = clean_parsed_text(raw_text_content)
 
     # Prepara la struttura dati
     data = {
+        "url": url,
+        "domain": domain,
+        "title": title,
         "html_text": raw_html_content, # Qui l'HTML è intatto
         "gold_text": cleaned_text    # Qui il testo è stato pulito
     }
