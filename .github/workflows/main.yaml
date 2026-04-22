@@ -22,7 +22,7 @@ jobs:
 
       # 2. Avvia il progetto
       - name: Avvia il progetto
-        working-directory: ./frontend
+        working-directory: /frontend
         run: docker compose up --build -d
 
       - name: Attesa avvio servizi
@@ -35,5 +35,5 @@ jobs:
       # 4. Spegne i container
       - name: Ferma i container
         if: always()
-        working-directory: ./frontend
+        working-directory: /frontend
         run: docker compose stop
