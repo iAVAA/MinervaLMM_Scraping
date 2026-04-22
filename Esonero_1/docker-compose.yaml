@@ -1,4 +1,23 @@
+# ==============================================================================
+# Percorso relativo: docker-compose.yaml
+# Corso: Laboratorio di ingegneria informatica
+# Corso di Laurea: Ingegneria informatica e automatica
+# Ateneo: Sapienza Università di Roma
+# Data: Aprile 2026
+# Autori: Matricole 2114420, 2115153, 2056502
+#
+# Descrizione:
+# Questo file di configurazione Docker Compose orchestra l'infrastruttura
+# a microservizi dell'applicazione. Definisce e collega i container per il backend 
+# (API di parsing) e il frontend (interfaccia utente), gestendo il networking
+# interno, i volumi per lo sviluppo continuo (hot-reloading) e le variabili 
+# d'ambiente necessarie per la corretta comunicazione inter-servizio.
+# ==============================================================================
+
 services:
+  # ----------------------------------------------------------------------------
+  # Servizio Backend: Espone le API RESTful per scraping, parsing e valutazione
+  # ----------------------------------------------------------------------------
   backend:
     build:
       context: ./backend
@@ -6,35 +25,45 @@ services:
     working_dir: /app/backend
     command: uvicorn src.main:app --host 0.0.0.0 --port 8003 --reload
     ports:
-      - "8003:8003"
+      - "8003:8003" # Esposizione della porta API verso la macchina host
     volumes:
+      # Montaggio del codice sorgente per permettere l'aggiornamento live (hot-reloading)
       - ./backend:/app/backend
+      # Condivisione in sola lettura dei file di configurazione e del Ground Truth (Gold Standard)
       - ./domains.json:/app/domains.json
       - ./gs_data:/app/gs_data
     environment:
       - PORT=8003
       - PYTHONUTF8=1
-      - PYTHONPATH=/app/backend
+      - PYTHONPATH=/app/backend # Garantisce la corretta risoluzione dei path di importazione Python
     networks:
       - esonero_network
       
+  # ----------------------------------------------------------------------------
+  # Servizio Frontend: Gestisce l'interfaccia utente web (FastAPI + Jinja2)
+  # ----------------------------------------------------------------------------
   frontend:
     build:
       context: ./frontend
     container_name: esonero_frontend
     ports:
-      - "8004:8004"
+      - "8004:8004" # Esposizione della porta UI verso la macchina host
     volumes:
+      # Montaggio della directory frontend per riflettere le modifiche ai template in tempo reale
       - ./frontend:/app/frontend
     environment:
+      # Indirizzo di rete interno Docker per permettere al frontend di comunicare col backend
       - BACKEND_URL=http://backend:8003
       - PYTHONUTF8=1
       - PYTHONPATH=/app/frontend
     depends_on:
-      - backend
+      - backend # Regola l'ordine di avvio: il frontend attende l'inizializzazione del backend
     networks:
       - esonero_network
 
+# ------------------------------------------------------------------------------
+# Topologia di Rete: Definisce l'ambiente di rete virtuale isolato
+# ------------------------------------------------------------------------------
 networks:
   esonero_network:
-    driver: bridge
+    driver: bridge # Utilizza il driver bridge di default per la comunicazione locale tra container

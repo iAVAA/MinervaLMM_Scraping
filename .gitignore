@@ -1,6 +1,9 @@
 # Enviroment Variables
 *.env
 
+# Mac Os
+.DS_Store
+
 # Docker
 docker-compose.yml
 mybb/

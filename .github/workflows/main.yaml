@@ -1,0 +1,39 @@
+name: Autograder Esonero 1
+
+on:
+  workflow_dispatch:
+    inputs:
+      matricola:
+        description: 'Inserisci la tua matricola'
+        required: true
+
+jobs:
+  grade:
+    name: Esegui Grader
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del codice
+        uses: actions/checkout@v4
+
+      # 1. Carica l'immagine del grader
+      - name: Carica immagine Grader
+        run: docker load -i lab-grader-esonero-1_1.0.1.tar.gz
+
+      # 2. Avvia il progetto
+      - name: Avvia il progetto
+        working-directory: ./Esonero_1
+        run: docker compose up --build -d
+
+      - name: Attesa avvio servizi
+        run: sleep 10
+
+      # 3. Esegue il Grader
+      - name: Esegui Grader
+        run: docker run --network host lab-grader-esonero-1:1.0.1 ${{ github.event.inputs.matricola }}
+
+      # 4. Spegne i container
+      - name: Ferma i container
+        if: always()
+        working-directory: ./Esonero_1
+        run: docker compose stop
