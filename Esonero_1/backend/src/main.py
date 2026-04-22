@@ -72,6 +72,7 @@ async def parse_url(url: str):
             detail=f"No parser implemented for domain: {domain}"
         )
     
+    
     try:
         return await parser.parse(url)
     except Exception as e:
