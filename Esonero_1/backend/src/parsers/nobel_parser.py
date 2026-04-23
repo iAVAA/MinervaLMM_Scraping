@@ -74,11 +74,7 @@ class NobelParser:
                 "script", "style", "nav", "footer", "aside", "header", 
                 "form", "img", "picture", "source", "figure", "noscript", 
                 "video", "iframe", "button", "input"
-            ],
-            
-            # Flag per l'ottimizzazione e la sanitizzazione del markdown di output
-            ignore_links=True,
-            exclude_external_images=True
+            ]
         )
 
     async def parse(self, url: str, html_text: str = None) -> dict:

@@ -214,7 +214,8 @@ class RomaTodayParser:
 
         # Inizializzazione del crawler asincrono
         async with AsyncWebCrawler(config=self.browser_config) as crawler:
-            result = await crawler.arun(url=url, config=crawler_config)
+            run_url = f"raw:{html_text}" if html_text else url
+            result = await crawler.arun(url=run_url, config=crawler_config)
 
             # Estrazione sicura di titolo e sommario
             title, summary = self._extract_meta_from_html(result.html)

@@ -11,29 +11,86 @@ jobs:
   grade:
     name: Esegui Grader
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
+      # 1. Checkout
       - name: Checkout del codice
         uses: actions/checkout@v4
 
-      # 1. Carica l'immagine del grader
+      # 2. Load grader image
       - name: Carica immagine Grader
         run: docker load -i lab-grader-esonero-1_1.0.1.tar.gz
 
-      # 2. Avvia il progetto
+      # 3. Avvia servizi con docker compose
       - name: Avvia il progetto
         working-directory: ./Esonero_1
-        run: docker compose up --build -d
+        run: |
+          docker compose up --build -d
+          docker compose ps
 
-      - name: Attesa avvio servizi
-        run: sleep 10
+      # 4. Determina nome rete Docker
+      - name: Ottieni network Docker
+        id: network
+        working-directory: ./Esonero_1
+        run: |
+          NET=$(docker compose ls --format json | jq -r '.[0].Name')_default
+          echo "network=$NET" >> $GITHUB_OUTPUT
+          echo "Using network: $NET"
 
-      # 3. Esegue il Grader
+      # 5. Healthcheck attivo backend
+      - name: Attendi backend pronto
+        run: |
+          for i in {1..30}; do
+            echo "Tentativo $i: controllo backend..."
+            if docker run --rm --network ${{ steps.network.outputs.network }} curlimages/curl \
+              -s http://backend:8003/health || \
+               docker run --rm --network ${{ steps.network.outputs.network }} curlimages/curl \
+              -s http://backend:8003; then
+              echo "Backend raggiungibile"
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "Backend non raggiungibile"
+          exit 1
+
+      # 6. Diagnostica pre-grader
+      - name: Diagnostica servizi
+        working-directory: ./Esonero_1
+        run: |
+          echo "=== CONTAINER STATUS ==="
+          docker compose ps
+
+          echo "=== BACKEND LOGS ==="
+          docker compose logs backend --tail=100
+
+      # 7. Esecuzione grader
       - name: Esegui Grader
-        run: docker run --network host lab-grader-esonero-1:1.0.1 ${{ github.event.inputs.matricola }}
+        run: |
+          docker run --rm \
+            --network ${{ steps.network.outputs.network }} \
+            lab-grader-esonero-1:1.0.1 \
+            ${{ github.event.inputs.matricola }}
 
-      # 4. Spegne i container
-      - name: Ferma i container
+      # 8. Diagnostica in caso di errore
+      - name: Diagnostica fallimento
+        if: failure()
+        working-directory: ./Esonero_1
+        run: |
+          echo "=== FULL LOGS ==="
+          docker compose logs
+
+          echo "=== DOCKER NETWORKS ==="
+          docker network ls
+
+          echo "=== DOCKER INSPECT BACKEND ==="
+          docker inspect backend || true
+
+      # 9. Cleanup sempre
+      - name: Cleanup
         if: always()
         working-directory: ./Esonero_1
-        run: docker compose stop
+        run: |
+          docker compose down -v --remove-orphans
