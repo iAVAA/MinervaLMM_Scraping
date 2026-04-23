@@ -12,11 +12,6 @@ specializzato per il recupero di articoli dal dominio "romatoday.it".
 Utilizza una complessa pipeline di pulizia basata su iniezioni JavaScript (per
 rimuovere paywall, pubblicità, embed social e sezioni correlate) ed espressioni 
 regolari sul Markdown risultante per garantire l'estrazione del solo testo utile.
-
-
-
-Aggiunto If romatoday/eventi per configurazione dedicata a quella sezione
-
 """
 
 import re
@@ -93,57 +88,6 @@ class RomaTodayParser:
             cache_mode=CacheMode.BYPASS
         )
 
-        # Configurazione dedicata agli articoli della sezione eventi.
-        # Configurazione dedicata agli articoli della sezione eventi.
-        self.event_js_cleanup_script = """
-        const selectors = [
-            '.u-label-02', 
-            
-            /* --- RIMOZIONE GALLERIE E CAROSELLI --- */
-            '[type="blackstone/widget+json"]', // I widget di tipo JSON
-            '.c-carousel__container',          // Contenitore foto carousel
-            '.o-bg-dark',                      // Spesso contiene la UI della galleria fotografica
-            '[id^="2Tf"]',                     // Gli ID casuali assegnati alle gallerie
-            
-            /* --- RIMOZIONE PUBBLICITÀ E SLOT --- */
-            '[class*="slot-intext"]',          // Slot pubblicitari in-text
-            '[class*="slot-story"]',           // Slot pubblicitari story
-            '[data-move]',                     // Script di posizionamento dinamico adv
-            
-            /* --- RIMOZIONE IFRAME E MAPPE --- */
-            'iframe#maps_embed',               // Google Maps iframe
-            'iframe',                          // Mappe o altri embed non utili
-            
-            /* --- RIMOZIONE JAVASCRIPT INUTILI E TRACKING --- */
-            'script[src*="flickity"]',         // Script del carosello foto
-            'link[href*="flickity"]',          // CSS del carosello
-            'script[type="text/async-html"]',  // Script asincroni (spesso tracciamento)
-            
-            /* --- RIMOZIONE DELLE IMMAGINI --- */
-            'img', 'figure', 'picture',        // Se non ti servono nel markdown finale
-            
-            /* --- PULIZIA SPECIFICA ICONE E TITOLI EXTRA --- */
-            'svg.o-icon',                      // Icone sparse (es. fotocamera)
-            'h2 > a.o-link-inverse'            // Il titolo cliccabile sopra la galleria
-        ];
-        
-        document.querySelectorAll(selectors.join(', ')).forEach(el => el.remove());
-        """
-        self.event_crawler_config = CrawlerRunConfig(
-            css_selector=".l-entry__title ,.u-m-small, .c-entry" ,
-            js_code=self.event_js_cleanup_script,
-            excluded_tags=["nav", "footer", "aside", "form", "script", "style"],
-            word_count_threshold=5,
-            exclude_external_links=False,
-            magic=True,
-            cache_mode=CacheMode.BYPASS
-        )
-
-    def _get_crawler_config(self, url: str) -> CrawlerRunConfig:
-        if url.startswith("https://www.romatoday.it/eventi"):
-            return self.event_crawler_config
-        return self.crawler_config
-
     def _extract_meta_from_html(self, raw_html: str) -> tuple[str, str]:
         """
         Estrae titolo e sommario analizzando direttamente l'HTML grezzo tramite espressioni regolari.
@@ -210,12 +154,9 @@ class RomaTodayParser:
         if domain not in ["www.romatoday.it", "romatoday.it"] and not html_text:
             raise ValueError("Questo parser supporta solo il dominio www.romatoday.it")
 
-        crawler_config = self._get_crawler_config(url)
-
         # Inizializzazione del crawler asincrono
         async with AsyncWebCrawler(config=self.browser_config) as crawler:
-            run_url = f"raw:{html_text}" if html_text else url
-            result = await crawler.arun(url=run_url, config=crawler_config)
+            result = await crawler.arun(url=url, config=self.crawler_config)
 
             # Estrazione sicura di titolo e sommario
             title, summary = self._extract_meta_from_html(result.html)

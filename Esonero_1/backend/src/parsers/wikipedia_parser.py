@@ -54,7 +54,7 @@ class WikipediaParser:
             'ol.references', '.references', '.mw-indicators', '#coordinates',
             'form', 'input', 'button', 'textarea', 'select',
             '.infobox-caption', '.wp-caption-text', 'caption',
-            '.catlinks', '#catlinks', '.mw-authority-control', '.asst-links'
+            '.catlinks', '#catlinks', '.mw-authority-control', '.asst-links','.refbegin'
         ];
         document.querySelectorAll(selectors.join(', ')).forEach(el => el.remove());
 
