@@ -19,6 +19,7 @@ import json
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from urllib.parse import urlparse, unquote
+import asyncio
 
 # --- PATH DISCOVERY ---
 # Identificazione dinamica della root del progetto per garantire la portabilità
@@ -303,22 +304,24 @@ async def full_gs_eval(domain: str):
     # Inizializzazione degli accumulatori per il calcolo della media aritmetica
     metrics_sum = {k: 0.0 for k in ["precision", "recall", "f1", "jaccard", "cer", "wer", "rouge_l", "leakage"]}
     
-    for item in gs_list:
-        url = item["url"]
-        gold_text = item["gold_text"]
-        
+    async def process_item(item):
         try:
             # Sfrutta l'HTML in cache (se disponibile) per massimizzare le performance di test
-            parsed_data = await parser.parse(url, html_text=item.get("html_text"))
-            metrics = token_level_eval(parsed_data["parsed_text"], gold_text)
-            
+            parsed_data = await parser.parse(item["url"], html_text=item.get("html_text"))
+            return token_level_eval(parsed_data["parsed_text"], item["gold_text"])
+        except Exception:
+            # Fallback passivo per i record falliti
+            return None
+
+    # Calcolo parallelo attraverso le task asyncio
+    tasks = [process_item(item) for item in gs_list]
+    results = await asyncio.gather(*tasks)
+    
+    for metrics in results:
+        if metrics is not None:
             # Somma incrementale delle metriche correnti
             for k in metrics_sum:
                 metrics_sum[k] += metrics[k]
-        except Exception:
-            # Fallback passivo: in una build di produzione qui andrebbe un logging su file (es. logger.warning).
-            # Ignoriamo il record fallito per non interrompere il job massivo.
-            continue
             
     count = len(gs_list)
     # Calcolo delle medie pesate sul totale dei documenti del Gold Standard
