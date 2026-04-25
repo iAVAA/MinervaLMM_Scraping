@@ -20,7 +20,7 @@ jobs:
         run: docker load -i lab-grader-esonero-1_1.0.1.tar.gz
 
       - name: Avvia il progetto
-        working-directory: ./Esonero_1
+        working-directory: ./2114420_2115153_2056502_lab_esonero_1
         run: |
           docker compose up --build -d
           docker compose ps
@@ -40,7 +40,7 @@ jobs:
           exit 1
 
       - name: Diagnostica servizi
-        working-directory: ./Esonero_1
+        working-directory: ./2114420_2115153_2056502_lab_esonero_1
         run: |
           docker compose ps
           docker compose logs backend --tail=50
@@ -54,7 +54,7 @@ jobs:
 
       - name: Diagnostica fallimento
         if: failure()
-        working-directory: ./Esonero_1
+        working-directory: ./2114420_2115153_2056502_lab_esonero_1
         run: |
           echo "=== DOCKER COMPOSE LOGS ==="
           docker compose logs
@@ -63,5 +63,5 @@ jobs:
 
       - name: Cleanup
         if: always()
-        working-directory: ./Esonero_1
+        working-directory: ./2114420_2115153_2056502_lab_esonero_1
         run: docker compose down -v --remove-orphans
