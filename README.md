@@ -1,69 +1,129 @@
-# Minerva LLM & Web Scraping - Esonero 1
+# Minerva LLM & Web Scraping — Assignment 1
 
-Sistema a microservizi basato su **FastAPI** e **Docker** per scraping, parsing e valutazione automatica di contenuti web.
+A microservices-based system built with **FastAPI** and **Docker** for automated web scraping, parsing, and evaluation of extracted content.
 
-Il progetto estrae dati da domini specifici, li confronta con un **Gold Standard** e calcola metriche NLP per valutarne la qualità.
-
----
-
-## Architettura
-
-Il sistema è containerizzato tramite `docker-compose` ed è composto da due componenti principali:
-
-### Backend (porta 8003)
-API REST sviluppata in FastAPI che:
-- gestisce i parser per dominio
-- esegue scraping e parsing dei contenuti
-- carica il Gold Standard locale
-- calcola metriche di valutazione NLP
-- supporta esecuzioni batch asincrone su interi domini
-
-### Frontend (porta 8004)
-Interfaccia web basata su FastAPI + Jinja2 che:
-- consuma le API del backend
-- permette l’interazione con il sistema in modo semplice e intuitivo
+The project extracts structured information from domain-specific websites, compares it against a **Gold Standard**, and computes multiple **NLP evaluation metrics** to assess extraction quality.
 
 ---
 
-## Funzionalità
+## Overview
 
-- **Parsing per dominio (Factory/Strategy pattern)**
-  - Wikipedia
-  - Nobel Prize
-  - RomaToday
-  - Governo italiano
+The system is containerized using `Docker Compose` and consists of two main services:
 
-- **Valutazione NLP**
-  - Precision / Recall / F1-score
-  - ROUGE-L
-  - Levenshtein distance (CER/WER)
-  - Jaccard index
-  - Leakage analysis
+### Backend (Port 8003)
 
-- **Batch evaluation asincrona**
-  - elaborazione di interi dataset per dominio
-  - aggregazione automatica delle metriche
+A REST API built with **FastAPI** responsible for:
 
-- **Hot-reload in sviluppo**
-  - aggiornamento live del codice tramite volumi Docker
-  - refresh automatico di API e template
+- managing domain-specific parsers
+- performing web scraping and content parsing
+- loading local Gold Standard datasets
+- computing NLP evaluation metrics
+- supporting asynchronous batch execution across entire domains
 
----
+### Frontend (Port 8004)
 
-## Stack tecnologico
+A web interface built with **FastAPI + Jinja2** that:
 
-- Python 3
-- FastAPI, Uvicorn, Jinja2
-- Crawl4AI, Playwright, BeautifulSoup4, HTML2Text
-- Levenshtein, rouge-score
-- Docker, Docker Compose
+- consumes backend APIs
+- provides an intuitive interface for interacting with the system
+- visualizes parsing and evaluation workflows
 
 ---
 
-## Avvio del progetto
+## Features
 
-Clona il repository e avvia i container:
+### Domain-Specific Parsing (Factory / Strategy Pattern)
+
+Supported domains include:
+
+- **Wikipedia**
+- **Nobel Prize**
+- **RomaToday**
+- **Italian Government**
+
+### NLP Evaluation Metrics
+
+The system evaluates extraction quality through:
+
+- **Precision / Recall / F1-score**
+- **ROUGE-L**
+- **Levenshtein Distance (CER / WER)**
+- **Jaccard Index**
+- **Leakage Analysis**
+
+### Asynchronous Batch Evaluation
+
+- processing of entire domain datasets
+- automated aggregation of evaluation metrics
+- scalable execution pipeline
+
+### Development Hot Reload
+
+- live code updates through Docker volumes
+- automatic backend and frontend refresh during development
+
+---
+
+## Tech Stack
+
+### Backend & Web Frameworks
+- **Python 3**
+- **FastAPI**
+- **Uvicorn**
+- **Jinja2**
+
+### Web Scraping & Parsing
+- **Crawl4AI**
+- **Playwright**
+- **BeautifulSoup4**
+- **HTML2Text**
+
+### NLP & Evaluation
+- **Levenshtein**
+- **rouge-score**
+
+### Infrastructure
+- **Docker**
+- **Docker Compose**
+
+---
+
+## Project Architecture
+
+The application follows a **microservices architecture**, separating business logic and user interaction into independent services:
+
+- **Backend Service** → scraping, parsing, NLP evaluation
+- **Frontend Service** → UI layer and API consumption
+
+This design improves **modularity**, **maintainability**, and **scalability**.
+
+---
+
+## Getting Started
+
+Clone the repository and start the containers:
 
 ```bash
 docker-compose up --build
 ```
+
+Once started:
+
+- **Backend API** → `http://localhost:8003`
+- **Frontend UI** → `http://localhost:8004`
+
+---
+
+## Development
+
+The project supports **hot reload** during development, allowing code changes to be reflected automatically without rebuilding containers.
+
+```bash
+docker-compose up
+```
+
+---
+
+## License
+
+This project is distributed under the **MIT License**. See the [LICENSE](LICENSE) file for more information.
