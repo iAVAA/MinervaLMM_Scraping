@@ -1,4 +1,4 @@
-# Minerva LLM & Web Scraping — Assignment 1
+# Minerva LLM & Web Scraping - Assignment 1
 
 A microservices-based system built with **FastAPI** and **Docker** for automated web scraping, parsing, and evaluation of extracted content.
 
